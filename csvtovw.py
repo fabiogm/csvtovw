@@ -129,16 +129,7 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, bow):
 
 
 def main(input_file, output_file, separator, namespaces, label, bow, types):
-    if label:
-        print("Converting train file")
-        start = datetime.now()
         csv_to_vw(input_file, output_file, label, types, bow)
-        print("Done. Elapsed time: %s" % (str(datetime.now() - start)))
-    else:
-        print("Converting test file")
-        start = datetime.now()
-        csv_to_vw(input_file, output_file, label, types, bow)
-        print("Done. Elapsed time: %s" % (str(datetime.now() - start)))
 
 
 if __name__ == "__main__":
