@@ -115,8 +115,7 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, bow):
                     else:
                         val = '1'
 
-                # KLUDGE. This should be and option, but currently as we don't use bag of words, remove spaces from
-                # features.
+                # TODO. Turn this into an option.
                 val = val.replace(' ', '_')
 
                 if name == label:
