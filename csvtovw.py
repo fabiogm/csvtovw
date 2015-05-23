@@ -150,7 +150,6 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--separator', type=str, default=',', help='Field separator. Default , (comma)')
     parser.add_argument('-n', '--namespace', nargs=2, type=str, action='append', help='Specify namespaces.')
     parser.add_argument('-t', '--type', nargs=2, type=str, action='append', help='Specify field type, overriding detection.')
-    parser.add_argument('-i', '--ignore', nargs=2, type=str, action='append')
     parser.add_argument('-b', '--bow', action='store_true', help='Use Bag of Words.')
     args = parser.parse_args()
     main(args.input_file, args.output_file, args.separator, args.namespace, args.label, args.bow, args.type) 
