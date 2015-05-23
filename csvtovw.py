@@ -25,8 +25,6 @@
 import argparse
 import csv
 import sys
-from collections import defaultdict
-from datetime import datetime
 from itertools import chain
 
 class FeatureLine(object):
