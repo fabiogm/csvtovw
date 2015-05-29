@@ -92,7 +92,7 @@ def infer_types(reader, label):
     return line, fieldtypes 
 
 
-def csv_to_vw(inputfile, outputfile, label, userTypes, bow):
+def csv_to_vw(inputfile, outputfile, label, userTypes, bow, ignore):
     with open(inputfile, 'r') as infile, open(outputfile, 'wb') as outfile:
         reader = csv.DictReader(infile)
         l, types = infer_types(reader, label)
@@ -119,15 +119,16 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, bow):
                 if name == label:
                     feature_line.label = val
                 else:
-                    feat_line = append_feature_line(feature_line, name, val, types[name])
+                    if name not in ignore:
+                        feat_line = append_feature_line(feature_line, name, val, types[name])
             
             
             line_str = create_vw_line(feature_line, bow)
             emit(line_str, outfile)
 
 
-def main(input_file, output_file, separator, namespaces, label, bow, types):
-        csv_to_vw(input_file, output_file, label, types, bow)
+def main(input_file, output_file, separator, namespaces, label, bow, types, ignore):
+        csv_to_vw(input_file, output_file, label, types, bow, ignore)
 
 
 if __name__ == "__main__":
@@ -139,6 +140,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--namespace', nargs=2, type=str, action='append', help='Specify namespaces.')
     parser.add_argument('-t', '--type', nargs=2, type=str, action='append', help='Specify field type, overriding detection.')
     parser.add_argument('-b', '--bow', action='store_true', help='Use Bag of Words.')
+    parser.add_argument('-i', '--ignore', type=str, action='append', help='Ignore fields.')
     args = parser.parse_args()
-    main(args.input_file, args.output_file, args.separator, args.namespace, args.label, args.bow, args.type) 
+    main(args.input_file, args.output_file, args.separator, args.namespace, args.label, args.bow, args.type, args.ignore) 
 
