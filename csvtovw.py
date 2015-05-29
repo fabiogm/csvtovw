@@ -99,6 +99,9 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, bow, ignore):
         if userTypes:
             types.update(userTypes)
 
+        if not ignore:
+            ignore = []
+
         for line in chain([l], reader):
             line_str = ''
             feature_line = FeatureLine()
