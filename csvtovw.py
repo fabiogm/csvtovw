@@ -24,33 +24,41 @@
 
 import argparse
 import csv
+import platform
 import sys
+from collections import defaultdict
 from itertools import chain
+
+printf = None
 
 class FeatureLine(object):
     def __init__(self, *kwargs):
         self.string_namespace = []
         self.numeric_namespace = []
+        self.other_namespaces = defaultdict(lambda: [])
         self.label = ''
 
 
-def append_feature_line(feature_line, name, val, typ):
-    if typ == 'str':
-        feature_line.string_namespace.append((name, val))
-    else:
-        feature_line.numeric_namespace.append((name, val))
+    def append(self, name, val, typ, namespace):
+        if namespace:
+            self.other_namespaces[namespace].append((name, val))
+        elif typ == 'str':
+            self.string_namespace.append((name, val))
+        else:
+            self.numeric_namespace.append((name, val))
 
-    return feature_line
 
-
-def create_vw_line(feature_line, bow=False):
+def create_vw_line(feature_line, namespacenames, bow=False):
     line = ''
 
     if feature_line.label != '':
         line += feature_line.label
-        line += ' |'
-    else:
-        line += ' |'
+        
+        if not namespacenames:
+            line += ' |'
+    #else:
+    #    if not namespacenames:
+    #        line += ' |'
    
     if bow:
         for f in feature_line.string_namespace:
@@ -58,13 +66,28 @@ def create_vw_line(feature_line, bow=False):
 
         for f in feature_line.numeric_namespace:
             line += ' ' + f[1]
-    
-    else:
-        for f in feature_line.string_namespace:
-            line += ' ' + f[0] + '_' + f[1]
 
-        for f in feature_line.numeric_namespace:
-            line += ' ' + f[0] + ':' + f[1]
+    else:
+        if namespacenames:
+            for f in feature_line.string_namespace:
+                line += ' |' + f[0] + ' ' + f[1]
+
+            line += ' |numeric'
+            for f in feature_line.numeric_namespace:
+                line += ' ' + f[0] + ':' + f[1]
+        
+        else:
+            for f in feature_line.string_namespace:
+                line += ' ' + f[0] + '_' + f[1]
+
+            for f in feature_line.numeric_namespace:
+                line += ' ' + f[0] + ':' + f[1]
+
+    for k, v in feature_line.other_namespaces.iteritems():
+        line += ' |' + k
+
+        for f in v:
+            line += ' ' + f[1]
 
     return line
 
@@ -92,10 +115,17 @@ def infer_types(reader, label):
     return line, fieldtypes 
 
 
-def csv_to_vw(inputfile, outputfile, label, userTypes, bow, ignore):
+def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, namespacenames):
     with open(inputfile, 'r') as infile, open(outputfile, 'wb') as outfile:
         reader = csv.DictReader(infile)
         l, types = infer_types(reader, label)
+        
+        if not outfile:
+            outfile = sys.stdout
+        
+        if not namespaces:
+            namespaces = {}
+
         if userTypes:
             types.update(userTypes)
 
@@ -117,21 +147,42 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, bow, ignore):
                         val = '1'
 
                 # TODO. Turn this into an option.
-                val = val.replace(' ', '_')
+                #if not bow:
+                #    val = val.replace(' ', '_')
 
                 if name == label:
                     feature_line.label = val
                 else:
                     if name not in ignore:
-                        feat_line = append_feature_line(feature_line, name, val, types[name])
+                        feature_line.append(name, val, types[name], namespaces.get(name))
             
             
-            line_str = create_vw_line(feature_line, bow)
+            line_str = create_vw_line(feature_line, namespacenames, bow)
             emit(line_str, outfile)
 
 
-def main(input_file, output_file, separator, namespaces, label, bow, types, ignore):
-        csv_to_vw(input_file, output_file, label, types, bow, ignore)
+def main(args):
+    global printf
+
+    def myprint(x):
+        print x
+
+    if args.verbose:
+        printf = myprint
+    else:
+        printf = lambda x: None
+
+    if platform.python_implementation() != 'PyPy':
+        printf('Run this through PyPy for better performance')
+
+    printf('Converting %s -> %s' % (args.input_file, args.output_file))
+    printf('Separator: %s' % args.separator)
+    printf('Bag of Words? %s' % ('Yes' if args.bow else 'No'))
+    printf('Ignoring fields: %s' % args.ignore)
+    printf('Label: %s' % args.label)
+
+    csv_to_vw(args.input_file, args.output_file, args.label, args.type, dict(args.namespace), args.bow, 
+            args.ignore, args.namespacenames)
 
 
 if __name__ == "__main__":
@@ -140,10 +191,13 @@ if __name__ == "__main__":
     parser.add_argument('input_file', help='Path to input CSV file')
     parser.add_argument('output_file', help='Path to output Vowpal Wabbit format file')
     parser.add_argument('-s', '--separator', type=str, default=',', help='Field separator. Default , (comma)')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Activate verbose output')
     parser.add_argument('-n', '--namespace', nargs=2, type=str, action='append', help='Specify namespaces.')
     parser.add_argument('-t', '--type', nargs=2, type=str, action='append', help='Specify field type, overriding detection.')
     parser.add_argument('-b', '--bow', action='store_true', help='Use Bag of Words.')
     parser.add_argument('-i', '--ignore', type=str, action='append', help='Ignore fields.')
+    parser.add_argument('-nn', '--namespacenames', action='store_true', help='Create separate namespaces for each feature.')
     args = parser.parse_args()
-    main(args.input_file, args.output_file, args.separator, args.namespace, args.label, args.bow, args.type, args.ignore) 
+    args.namespace = args.namespace if args.namespace else []
+    main(args)
 
