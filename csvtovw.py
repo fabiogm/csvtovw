@@ -38,7 +38,6 @@ class FeatureLine(object):
         self.other_namespaces = defaultdict(lambda: [])
         self.label = ''
 
-
     def append(self, name, val, typ, namespace):
         if namespace:
             self.other_namespaces[namespace].append((name, val))
@@ -47,49 +46,48 @@ class FeatureLine(object):
         else:
             self.numeric_namespace.append((name, val))
 
+    def create_vw_line(self, namespacenames, bow=False):
+        line = ''
 
-def create_vw_line(feature_line, namespacenames, bow=False):
-    line = ''
+        if self.label != '':
+            line += self.label
+            
+            if not namespacenames:
+                line += ' |'
+        #else:
+        #    if not namespacenames:
+        #        line += ' |'
+       
+        if bow:
+            for f in self.string_namespace:
+                line += ' ' + f[1]
 
-    if feature_line.label != '':
-        line += feature_line.label
-        
-        if not namespacenames:
-            line += ' |'
-    #else:
-    #    if not namespacenames:
-    #        line += ' |'
-   
-    if bow:
-        for f in feature_line.string_namespace:
-            line += ' ' + f[1]
+            for f in self.numeric_namespace:
+                line += ' ' + f[1]
 
-        for f in feature_line.numeric_namespace:
-            line += ' ' + f[1]
-
-    else:
-        if namespacenames:
-            for f in feature_line.string_namespace:
-                line += ' |' + f[0] + ' ' + f[1]
-
-            line += ' |numeric'
-            for f in feature_line.numeric_namespace:
-                line += ' ' + f[0] + ':' + f[1]
-        
         else:
-            for f in feature_line.string_namespace:
-                line += ' ' + f[0] + '_' + f[1]
+            if namespacenames:
+                for f in self.string_namespace:
+                    line += ' |' + f[0] + ' ' + f[1]
 
-            for f in feature_line.numeric_namespace:
-                line += ' ' + f[0] + ':' + f[1]
+                line += ' |numeric'
+                for f in self.numeric_namespace:
+                    line += ' ' + f[0] + ':' + f[1]
+            
+            else:
+                for f in self.string_namespace:
+                    line += ' ' + f[0] + '_' + f[1]
 
-    for k, v in feature_line.other_namespaces.iteritems():
-        line += ' |' + k
+                for f in self.numeric_namespace:
+                    line += ' ' + f[0] + ':' + f[1]
 
-        for f in v:
-            line += ' ' + f[1]
+        for k, v in self.other_namespaces.iteritems():
+            line += ' |' + k
 
-    return line
+            for f in v:
+                line += ' ' + f[1]
+
+        return line
 
 
 def emit(line, f):
@@ -157,7 +155,7 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, 
                         feature_line.append(name, val, types[name], namespaces.get(name))
             
             
-            line_str = create_vw_line(feature_line, namespacenames, bow)
+            line_str = feature_line.create_vw_line(namespacenames, bow)
             emit(line_str, outfile)
 
 
