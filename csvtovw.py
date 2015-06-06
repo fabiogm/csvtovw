@@ -95,7 +95,7 @@ def emit(line, f):
     f.write('\n')
 
 
-def infer_types(reader, label):
+def infer_types(reader):
     fieldtypes = {}
     line = reader.next()
 
@@ -116,7 +116,7 @@ def infer_types(reader, label):
 def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, namespacenames):
     with open(inputfile, 'r') as infile, open(outputfile, 'wb') as outfile:
         reader = csv.DictReader(infile)
-        l, types = infer_types(reader, label)
+        l, types = infer_types(reader)
         
         if not outfile:
             outfile = sys.stdout
