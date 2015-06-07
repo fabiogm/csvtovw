@@ -86,14 +86,14 @@ class FeatureLine(object):
         return line
 
     @classmethod
-    def from_dict(cls, d, fieldnames, label, types, ignore, namespaces):
+    def from_dict(cls, d, fieldnames, label, types, ignore, namespaces, isbinary):
         feature_line = cls()
         
         for name in fieldnames:
             val = d[name]
 
             # TODO. Clumsy way of converting 0 labels to -1 on training data. Only on binary classification problems, fix it.
-            if label and name == label and types[label] == 'int':
+            if label and name == label and isbinary and types[label] == 'int':
                 if val == '0' or val == 0:
                     val = '-1'
                 else:
@@ -135,7 +135,7 @@ def infer_types(reader):
     return line, fieldtypes 
 
 
-def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, namespacenames):
+def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, namespacenames, isbinary):
     with open(inputfile, 'r') as infile, open(outputfile, 'wb') as outfile:
         reader = csv.DictReader(infile)
         l, types = infer_types(reader)
@@ -154,7 +154,7 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, 
 
         for line in chain([l], reader):
             line_str = ''
-            feature_line = FeatureLine.from_dict(line, reader.fieldnames, label, types, ignore, namespaces)
+            feature_line = FeatureLine.from_dict(line, reader.fieldnames, label, types, ignore, namespaces, isbinary)
             line_str = feature_line.to_vw(namespacenames, bow)
             emit(line_str, outfile)
 
@@ -175,12 +175,12 @@ def main(args):
 
     printf('Converting %s -> %s' % (args.input_file, args.output_file))
     printf('Separator: %s' % args.separator)
-    printf('Bag of Words? %s' % ('Yes' if args.bow else 'No'))
+    printf('Bag of Words? %s' % ('Yes' if args.bagofwords else 'No'))
     printf('Ignoring fields: %s' % args.ignore)
     printf('Label: %s' % args.label)
 
-    csv_to_vw(args.input_file, args.output_file, args.label, args.type, dict(args.namespace), args.bow, 
-            args.ignore, args.namespacenames)
+    csv_to_vw(args.input_file, args.output_file, args.label, args.type, dict(args.namespace), args.bagofwords, 
+            args.ignore, args.namespacenames, args.binary)
 
 
 if __name__ == "__main__":
@@ -192,9 +192,10 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='store_true', help='Activate verbose output')
     parser.add_argument('-n', '--namespace', nargs=2, type=str, action='append', help='Specify namespaces.')
     parser.add_argument('-t', '--type', nargs=2, type=str, action='append', help='Specify field type, overriding detection.')
-    parser.add_argument('-b', '--bow', action='store_true', help='Use Bag of Words.')
+    parser.add_argument('-bow', '--bagofwords', action='store_true', help='Use Bag of Words.')
     parser.add_argument('-i', '--ignore', type=str, action='append', help='Ignore fields.')
     parser.add_argument('-nn', '--namespacenames', action='store_true', help='Create separate namespaces for each feature.')
+    parser.add_argument('-b', '--binary', action='store_true', help='This is a binary classification problem')
     args = parser.parse_args()
     args.namespace = args.namespace if args.namespace else []
     main(args)
