@@ -46,7 +46,7 @@ class FeatureLine(object):
         else:
             self.numeric_namespace.append((name, val))
 
-    def create_vw_line(self, namespacenames, bow=False):
+    def to_vw(self, namespacenames, bow=False):
         line = ''
 
         if self.label != '':
@@ -54,40 +54,62 @@ class FeatureLine(object):
             
             if not namespacenames:
                 line += ' |'
-        #else:
-        #    if not namespacenames:
-        #        line += ' |'
        
         if bow:
-            for f in self.string_namespace:
-                line += ' ' + f[1]
-
-            for f in self.numeric_namespace:
-                line += ' ' + f[1]
+            line = self._append_to_line(line, self.string_namespace, True, False)
+            line = self._append_to_line(line, self.numeric_namespace, True, False)
 
         else:
             if namespacenames:
-                for f in self.string_namespace:
-                    line += ' |' + f[0] + ' ' + f[1]
-
+                line = self._append_to_line(line, self.string_namespace, True, True, ' |') 
                 line += ' |numeric'
-                for f in self.numeric_namespace:
-                    line += ' ' + f[0] + ':' + f[1]
+                line = self._append_to_line(line, self.numeric_namespace, True, True, ' ', ':')
             
             else:
-                for f in self.string_namespace:
-                    line += ' ' + f[0] + '_' + f[1]
-
-                for f in self.numeric_namespace:
-                    line += ' ' + f[0] + ':' + f[1]
+                line = self._append_to_line(line, self.string_namespace, True, True, ' ', '_')
+                line = self._append_to_line(line, self.numeric_namespace, True, True, ' ', ':')
 
         for k, v in self.other_namespaces.iteritems():
             line += ' |' + k
 
-            for f in v:
-                line += ' ' + f[1]
+            line = self._append_to_line(line, v, False, True, ' ', '')
 
         return line
+    
+    def _append_to_line(self, line, items_col, print_first, print_second, beg=' ', sep=' '):
+        for f in items_col:
+            line += beg
+            line += f[0] if print_first else ''
+            line += sep
+            line += f[1] if print_second else ''
+
+        return line
+
+    @classmethod
+    def from_dict(cls, d, fieldnames, label, types, ignore, namespaces):
+        feature_line = cls()
+        
+        for name in fieldnames:
+            val = d[name]
+
+            # TODO. Clumsy way of converting 0 labels to -1 on training data. Only on binary classification problems, fix it.
+            if label and name == label and types[label] == 'int':
+                if val == '0' or val == 0:
+                    val = '-1'
+                else:
+                    val = '1'
+
+            # TODO. Turn this into an option.
+            #if not bow:
+            #    val = val.replace(' ', '_')
+
+            if name == label:
+                feature_line.label = val
+            else:
+                if name not in ignore:
+                    feature_line.append(name, val, types[name], namespaces.get(name))
+        
+        return feature_line
 
 
 def emit(line, f):
@@ -132,30 +154,8 @@ def csv_to_vw(inputfile, outputfile, label, userTypes, namespaces, bow, ignore, 
 
         for line in chain([l], reader):
             line_str = ''
-            feature_line = FeatureLine()
-            
-            for name in reader.fieldnames:
-                val = line[name]
-    
-                # TODO. Clumsy way of converting 0 labels to -1 on training data. Only on binary classification problems, fix it.
-                if label and name == label and types[label] == 'int':
-                    if val == '0' or val == 0:
-                        val = '-1'
-                    else:
-                        val = '1'
-
-                # TODO. Turn this into an option.
-                #if not bow:
-                #    val = val.replace(' ', '_')
-
-                if name == label:
-                    feature_line.label = val
-                else:
-                    if name not in ignore:
-                        feature_line.append(name, val, types[name], namespaces.get(name))
-            
-            
-            line_str = feature_line.create_vw_line(namespacenames, bow)
+            feature_line = FeatureLine.from_dict(line, reader.fieldnames, label, types, ignore, namespaces)
+            line_str = feature_line.to_vw(namespacenames, bow)
             emit(line_str, outfile)
 
 
