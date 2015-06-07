@@ -38,7 +38,7 @@ class FeatureLine(object):
         self.other_namespaces = defaultdict(lambda: [])
         self.label = ''
 
-    def append(self, name, val, typ, namespace):
+    def set_field(self, name, val, typ, namespace):
         if namespace:
             self.other_namespaces[namespace].append((name, val))
         elif typ == 'str':
@@ -56,27 +56,27 @@ class FeatureLine(object):
                 line += ' |'
        
         if bow:
-            line = self._append_to_line(line, self.string_namespace, True, False)
-            line = self._append_to_line(line, self.numeric_namespace, True, False)
+            line = self._append(line, self.string_namespace, True, False)
+            line = self._append(line, self.numeric_namespace, True, False)
 
         else:
             if namespacenames:
-                line = self._append_to_line(line, self.string_namespace, True, True, ' |') 
+                line = self._append(line, self.string_namespace, True, True, ' |') 
                 line += ' |numeric'
-                line = self._append_to_line(line, self.numeric_namespace, True, True, ' ', ':')
+                line = self._append(line, self.numeric_namespace, True, True, ' ', ':')
             
             else:
-                line = self._append_to_line(line, self.string_namespace, True, True, ' ', '_')
-                line = self._append_to_line(line, self.numeric_namespace, True, True, ' ', ':')
+                line = self._append(line, self.string_namespace, True, True, ' ', '_')
+                line = self._append(line, self.numeric_namespace, True, True, ' ', ':')
 
         for k, v in self.other_namespaces.iteritems():
             line += ' |' + k
 
-            line = self._append_to_line(line, v, False, True, ' ', '')
+            line = self._append(line, v, False, True, ' ', '')
 
         return line
     
-    def _append_to_line(self, line, items_col, print_first, print_second, beg=' ', sep=' '):
+    def _append(self, line, items_col, print_first, print_second, beg=' ', sep=' '):
         for f in items_col:
             line += beg
             line += f[0] if print_first else ''
@@ -107,7 +107,7 @@ class FeatureLine(object):
                 feature_line.label = val
             else:
                 if name not in ignore:
-                    feature_line.append(name, val, types[name], namespaces.get(name))
+                    feature_line.set_field(name, val, types[name], namespaces.get(name))
         
         return feature_line
 
